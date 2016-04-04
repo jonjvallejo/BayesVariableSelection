@@ -1,0 +1,9 @@
+model {
+	for (i in 1:N) {
+		y[i,1] ~ dnorm(mu[i], tau)
+	}
+	mu[1:N] <- jump.lin.pred(X[1:N, 1:p], k, 1.0E-6)
+	id <- jump.model.id(mu[1:N])
+	tau ~ dgamma(1.0E-4, 1.0E-4)
+	k ~ dbin(0.5, p)
+}

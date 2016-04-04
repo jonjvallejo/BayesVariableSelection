@@ -1,0 +1,15 @@
+model{
+	for (i in 1:N){
+		for (j in 1:p){
+			preMu[i,j] <- X[i,j] * theta[j]
+		}
+		mu[i] <- alpha + sum(preMu[i,])
+		y[i,1] ~ dnorm(mu[i], tau)
+	}
+	for (i in 1:p){
+		theta[i] ~ ddexp(0, 1)
+		Ind[i] <- step(abs(theta[i]) - 0.05)
+	}
+	alpha ~ dnorm(0, 1E-6)
+	tau ~ dgamma(1E-4, 1E-4)
+}

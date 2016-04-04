@@ -1,0 +1,16 @@
+model{
+	for (i in 1:N){
+		for (j in 1:p){
+			preMu[i,j] <- X[i,j] * theta[j]
+		}
+		mu[i] <- alpha + sum(preMu[i,])
+		y[i,1] ~ dnorm(mu[i], tau)
+	}
+	for (i in 1:p){
+		theta[i] ~ dnorm(0, tauTheta)
+		Ind[i] <- step(abs(theta[i]) - 0.05)	# Is theta within 0.05 of 0?
+	}
+	alpha ~ dnorm(0, 1E-6)
+	tau ~ dgamma(1E-4, 1E-4)
+	tauTheta ~ dgamma(1E-4, 1E-4)
+}

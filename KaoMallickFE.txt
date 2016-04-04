@@ -1,0 +1,17 @@
+model{
+	for (i in 1:N){
+		for (j in 1:p){
+			preMu[i,j] <- X[i,j] * theta[j]
+		}
+		mu[i] <- alpha + sum(preMu[i,])
+		y[i,1] ~ dnorm(mu[i], tau)
+	}
+	for (i in 1:p){
+		preBeta[i] ~ dnorm(0, 1E-6)
+		theta[i] <- Ind[i] * preBeta[i]
+		Ind[i] ~ dbern(pInd)
+	}
+	alpha ~ dnorm(0, 1E-6)
+	tau ~ dgamma(1E-4, 1E-4)
+	pInd <- 0.1		# Controls sparsity
+}

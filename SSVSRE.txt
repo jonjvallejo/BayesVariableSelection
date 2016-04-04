@@ -1,0 +1,26 @@
+model{
+	for (i in 1:N){
+		for (j in 1:p){
+			preMu[i,j] <- X[i,j] * theta[j]
+		}
+		mu[i] <- alpha + sum(preMu[i,])
+		y[i,1] ~ dnorm(mu[i], tau)
+	}
+	for (i in 1:p){
+		Ind[i] ~ dcat(pInd[])
+		beta[i] ~ dnorm(muBeta[Ind[i]], tauBeta[Ind[i]])
+		theta[i] <- Ind[i] * beta[i]
+	}
+	alpha ~ dnorm(0, 1E-6)
+	tau ~ dgamma(1E-4, 1E-4)
+	pInd[1] <- 0.1		# Controls sparsity
+	pInd[2] <- 1 - pInd[1]
+	
+	# Mixture prior for beta, second component narrow distribution ("spike")
+	muBeta[1] <- 0
+	muBeta[2] <- 0
+	tauBeta[1] <- g * tauBeta0
+	tauBeta[2] <- tauBeta0
+	tauBeta0 ~ dgamma(10, 1)		# Precision prior with large mean for "spike"
+	g <- 1E-5						# Multiplier for "slab"
+}

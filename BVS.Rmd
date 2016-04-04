@@ -1,0 +1,153 @@
+---
+title: "Bayesian Variable Selection Methods"
+author: "Jonathon Vallejo"
+date: "March 31, 2016"
+output: html_document
+---
+
+The problem is the familiar regression problem of trying to explain a response variable
+with a (large) number of explanatory variables (whether continuous or discrete factors).
+
+* Goal: select a small subset of the variables whilst controlling the rate of false
+detection, so that it can be inferred that these variables explain the a large fraction of
+the variation in the response. 
+
+* We may have some a priori knowledge or expectation that only a small proportion of candidates are truly affecting the outcome, and ideally this information should be taken into account in the variable selection. 
+
+* The optimal degree of sparseness and how many false detections are allowed is very problem-specific.
+
+One aspect of the problem is the well known trade-off between bias and variance. 
+
+* In general, a large set of variables is desirable for prediction and a small set of variables (that have a meaningful interpretation) for inference. 
+
+* Another aspect that influences the number of variables in the model is the number of observations in the data set. As a rule of thumb for shrinkage methods, one can safely consider only problems where there are maximally 10-15 times more candidates than observations (Zhang and Xu 2005; Hoti and Sillanpaa 2006). However, where the true and safe upper limit exists, is very problem specific and depends on degree of correlation (co-linearity) among the candidate variables.
+
+## Regression Model
+
+We consider the usual regression probelm. Let $y_i$ denote the outcome from subject $i = 1,...,N$, with $p$ associated covariates $x_{i,j}, j = 1,...,p$. Denote the regression parameters $\theta = (\theta_i)$. Then
+
+$$
+\begin{align}
+y_i &= \alpha + \sum_{j=1}^p \theta_j x_{i,j} + \epsilon_i \\
+&or \\
+\mathbf{y} &= \mathbf{X} \beta + \epsilon
+\end{align}
+$$
+where $\beta = (\alpha, \theta_i)$. The usual variable selection procedure involves using a "spike-and-slab" prior.
+
+* **Spike**: Didac point mass at 0. **Slab**: flat prior elsewhere. 
+
+* Define $I_j$ to be the indicator variable associated with the existence of $\theta_j$. We also need a variable for the effect size of $\theta_j$, call it $\beta_j$. 
+
+    + For example, $\theta_j = I_j \beta_j$
+    + When $I_j = 0$, $\beta_j$ can be defined in several ways. This is the difference among the methods given below.
+
+* One usually assigns a prior probability of 0.5 to each of these distributions, so that the existence of the coefficient is non-informative.
+
+## Concepts and Properties
+
+#### Sparseness
+
+How many predictors do we want to select? What is the *sparseness* we desire?
+
+* Can use optimality criterion (e.g. MSPE)
+
+* Can control sparsity through $P(I_j = 1)$. 
+
+    + Lower values yield more sparseness, higher values yield less sparseness.
+    + Setting this value to 0.5 can yield good mixing and makes all models equiprobable, but favors models where about half of the variables are selected, which is often unreasonable.
+    
+#### Tuning
+
+Ideally, the sampler should be able to jump efficiently between the slab and spike.
+
+* Consider the case when $\beta_j \approx 0$. Does $\beta_j$ exist with a small value, or does it not exist (i.e. does it have a non-significant impact on $y$?) 
+
+* Some data-based priors have been suggested (Smith and Kohn 2002), but this is not Bayesian!
+
+* Note that when $\beta_j \approx 0$, the likelihoods when $I_j = 0$ and $I_j = 1$ are *almost identical*.
+
+* It may be better to simply monitor $\theta_j = I_j \beta_j$ instead of the individual variables.
+
+#### Global adaptation
+
+* Fixed effects model: $\beta_j | (I_j = 1) \sim N(0, \tau^2)$, where $\tau^2$ is known.
+
+* Random effects model: $\beta_j | (I_j = 1) \sim N(0, \tau^2)$, where $\tau^2$ is unknown.
+
+#### Local adaptation
+
+* Covariate-specific variance: $\beta_j | (I_j = 1) \sim N(0, \tau_j^2)$, where $\tau_j^2$ is unknown.
+
+#### Analytical integration
+
+To speed up the MCMC, it is possible in some models to analytically integrate over $\theta$ and $\sigma^2$ and then use Gibbs sampling for the indicator variables. 
+
+* Updating $I_j$ does **not** depend on the effect, $\beta_j$.
+
+* In high-dimesional problems, one can simply update only the $\beta_j$ for which $I_j = 1$.
+
+#### Bayesian Model Averaging
+
+In Bayesian inference, we can marginalize over nuisance parameters. In this case, we can average over the various models.
+
+* In models with many covariates, those with large effects are selected, even if they are large by change.
+
+    + One way to solve this problem is to average over all possible models, weighting by probability of being the true model.
+    
+## Variable Selection Methods
+
+#### Kuo & Mallick
+
+$$
+\theta_j = I_j \beta_j
+$$
+
+* Assumes $P(I_j, \beta_j) = P(I_j) P(\beta_j)$ 
+
+* When $I_j = 0$, $\beta_j$ is sampled from its full conditional distribution, which is its prior distribution.
+
+    + If this prior is too vague, the sampled $\beta_j$ values may rarely be in the region where $\theta_j$ has large support, inducing poor mixing.
+    
+#### Gibbs Variable Selection (GVS)
+
+* Assumes $P(I_j, \beta_j) = P(\beta_j | I_j) P(I_j)$
+
+* Sample $\beta_j | (I_j = 0)$ from a *pseudo-prior*, i.e. a prior distribution which has no effect on the posterior.
+
+    + $P(\beta_j | I_j) = (1 - I_j) N(\tilde{\mu}, S) + I_j N(0, \tau^2)$
+    + The data can determine which values of $\mu$ and $S$ are good *without* directly influencing the posterior.
+    
+#### Stochastic Search Variable Selection (SSVS)
+
+* Assumes $P(I_j, \beta_j) = P(\beta_j | I_j) P(I_j)$
+
+* The spike is replaced by a narrow distribution.
+
+    + $P(\beta_j | I_j) = (1 - I_j) N(0, \tau^2) + I_j N(0, g \tau^2)$
+    + Makes $I_j$ and $\beta_j$ identifiable
+    + Requires tuning, which is not simple. 
+    
+### Adaptive shrinkage approaches
+
+These approaches rely on placing a prior directly on $\theta_j = \beta_j$, $\beta_j | \tau_j^2 \sim N(0, \tau_j)$.
+
+* A suitable prior is placed on $\tau_j$ to ensure the "spike-and-slab" shape.
+
+#### Jeffrey's prior
+
+* $P(\tau_j^2) \propto \frac{1}{\tau_j^2}$ as usual
+
+#### Laplacian shrinkage
+
+* $P(\tau_j | \gamma) = \frac{\gamma}{2} \exp{-\frac{\gamma}{2} \tau_j}$
+
+    + $p(\beta_j | \gamma) = \int_0^{\infty} p(\beta_j | \tau_j) p(\tau_j | \gamma) d\tau_j = \frac{\gamma}{2}\exp{-\sqrt{\gamma}|\beta_j|}$
+    + Thus, this prior leads to a Laplace prior on $\beta_j$. When $\gamma$ has its own prior, this is known as the Bayesian Lasso.
+    
+### Model space approach
+
+#### Reversible jump MCMC
+
+
+
